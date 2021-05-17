@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">WeatherApp</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="lat_lng" formatted="false">"%1$s : %2$s"</string>
+    <string name="city_not_found">City not found</string>
 </resources>
