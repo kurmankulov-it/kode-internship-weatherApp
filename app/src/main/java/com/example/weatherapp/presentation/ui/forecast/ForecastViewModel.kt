@@ -4,14 +4,14 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.forecast.GetWeatherByCityNameUseCase
+import com.example.domain.forecast.GetWeatherByCityName
+import com.example.domain.forecast.GetWeatherByCityNameImpl
 import com.example.domain.model.Weather
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.launch
 
 class ForecastViewModel(
-    private val getWeatherByCityNameUseCase: GetWeatherByCityNameUseCase
+    private val getWeatherByCityName: GetWeatherByCityName
 ) : ViewModel() {
 
     private val _weather: MutableLiveData<Weather?> = MutableLiveData()
@@ -19,7 +19,14 @@ class ForecastViewModel(
 
     fun getWeather(cityName: String) {
         viewModelScope.launch {
-            _weather.value = getWeatherByCityNameUseCase.execute(cityName).single().getOrNull()
+            _weather.value = getWeatherByCityName.execute(cityName).single().fold(
+                onSuccess = { weather ->
+                    weather
+                },
+                onFailure = { exception ->
+                    throw exception
+                }
+            )
         }
     }
 }

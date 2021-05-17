@@ -56,18 +56,7 @@ class ForecastFragment : Fragment() {
                 Glide.with(requireContext())
                     .load(weather.icon)
                     .into(binding.weatherIcon)
-                when (weather.condition) {
-                    WeatherCondition.CLEAR_SKY -> binding.weatherImage.setImageResource(R.drawable.weather_clear_sky)
-                    WeatherCondition.FEW_CLOUDS -> binding.weatherImage.setImageResource(R.drawable.weather_few_clouds)
-                    WeatherCondition.SCATTERED_CLOUDS -> binding.weatherImage.setImageResource(R.drawable.weather_scattered_clouds)
-                    WeatherCondition.BROKEN_CLOUDS -> binding.weatherImage.setImageResource(R.drawable.weather_broken_clouds)
-                    WeatherCondition.SHOWER_RAIN -> binding.weatherImage.setImageResource(R.drawable.weather_shower_rain)
-                    WeatherCondition.RAIN -> binding.weatherImage.setImageResource(R.drawable.weather_rain)
-                    WeatherCondition.THUNDERSTORM -> binding.weatherImage.setImageResource(R.drawable.weather_thunderstorm)
-                    WeatherCondition.SNOW -> binding.weatherImage.setImageResource(R.drawable.weather_snow)
-                    WeatherCondition.MIST -> binding.weatherImage.setImageResource(R.drawable.weather_mist)
-                    WeatherCondition.DEFAULT -> binding.weatherImage.setImageResource(R.drawable.weather_clear_sky)
-                }
+                binding.weatherImage.setImageResource(getImageResource(weather.condition))
             } else {
                 binding.weatherInfoLayout.visibility = View.GONE
                 binding.progressBar.visibility = View.GONE
@@ -76,5 +65,21 @@ class ForecastFragment : Fragment() {
         })
 
         return binding.root
+    }
+
+    private fun getImageResource(condition: WeatherCondition?): Int {
+        return when (condition) {
+            WeatherCondition.CLEAR_SKY -> R.drawable.weather_clear_sky
+            WeatherCondition.FEW_CLOUDS -> R.drawable.weather_few_clouds
+            WeatherCondition.SCATTERED_CLOUDS -> R.drawable.weather_scattered_clouds
+            WeatherCondition.BROKEN_CLOUDS -> R.drawable.weather_broken_clouds
+            WeatherCondition.SHOWER_RAIN -> R.drawable.weather_shower_rain
+            WeatherCondition.RAIN -> R.drawable.weather_rain
+            WeatherCondition.THUNDERSTORM -> R.drawable.weather_thunderstorm
+            WeatherCondition.SNOW -> R.drawable.weather_snow
+            WeatherCondition.MIST -> R.drawable.weather_mist
+            WeatherCondition.DEFAULT -> R.drawable.weather_clear_sky
+            null -> R.drawable.weather_clear_sky
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.example.weatherapp.presentation.ui.map
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Address
 import android.location.Location
 import android.opengl.Visibility
 import android.os.Bundle
@@ -19,9 +20,8 @@ import com.example.weatherapp.R
 import com.example.weatherapp.databinding.ForecastFragmentBinding
 import com.example.weatherapp.databinding.FragmentMapBinding
 import com.example.weatherapp.presentation.ui.forecast.ForecastFragment
-import com.example.weatherapp.util.Constants.CHECK_INTERNET_MESSAGE
-import com.example.weatherapp.util.MapUtils.addPin
-import com.example.weatherapp.util.isConnected
+import com.example.weatherapp.util.addPin
+import com.example.weatherapp.util.getPopupWindow
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -66,23 +66,9 @@ class MapFragment : Fragment(), OnMapReadyCallback {
         val mapFragment = childFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
 
-        popupWindow = PopupWindow(
-            layoutInflater.inflate(R.layout.pop_up_weather_window, null),
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        )
-        popupWindow.contentView.findViewById<Button>(R.id.showWeatherButton).setOnClickListener {
-            popupWindow.dismiss()
-            mMap.clear()
-            parentFragmentManager.beginTransaction().replace(
-                R.id.fragment_container, ForecastFragment.newInstance(
-                    popupWindow.contentView.findViewById<TextView>(R.id.cityName).text.toString()
-                )
-            ).addToBackStack(null).commit()
-        }
-        popupWindow.contentView.findViewById<ImageView>(R.id.closeButton).setOnClickListener {
-            popupWindow.dismiss()
-        }
+        popupWindow = getPopupWindow(layoutInflater)
+        popupWindow.contentView.findViewById<Button>(R.id.showWeatherButton)
+            .setOnClickListener(popUpWindowClickCallBack())
 
         return binding.root
     }
@@ -93,68 +79,81 @@ class MapFragment : Fragment(), OnMapReadyCallback {
 
         getUserLocationWithPermission()
         viewModel.userLocation.observe(viewLifecycleOwner, { location ->
-            when {
-                location.isSuccess -> {
-                    val userLocation = location.getOrNull()
-                    if (userLocation != null) {
-                        val coordinates = LatLng(userLocation.latitude, userLocation.longitude)
-                        viewModel.getCurrentCity(coordinates)
-                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinates, 10f))
-                        mMap.addPin(coordinates)
-                    }
-                }
-            }
+            userLocationHandler(location)
         })
 
-        viewModel.currentCity.observe(viewLifecycleOwner, { cityNameResult ->
-            when {
-                cityNameResult.isSuccess -> {
-                    val address = cityNameResult.getOrNull()
-                    if (!address?.locality.isNullOrEmpty()) {
-                        popupWindow.contentView.findViewById<TextView>(R.id.cityName).text =
-                            address?.locality
-                        val lat =
-                            address?.latitude?.let { Location.convert(it, Location.FORMAT_DEGREES) }
-                        val lon = address?.longitude?.let {
-                            Location.convert(
-                                it,
-                                Location.FORMAT_DEGREES
-                            )
-                        }
-                        popupWindow.contentView.findViewById<TextView>(R.id.location).text =
-                            "$lat $lon"
-                        popupWindow.showAtLocation(view, Gravity.BOTTOM, 0, 24)
-                    }
-                }
-                cityNameResult.isFailure -> {
-                    Toast.makeText(
-                        requireContext(),
-                        CHECK_INTERNET_MESSAGE,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
+        viewModel.currentCity.observe(viewLifecycleOwner, { address ->
+            currentCityHandler(address)
         })
 
         mMap.setOnMapClickListener { location ->
-            if (popupWindow.isShowing) {
-                popupWindow.dismiss()
-            }
-            viewModel.getCurrentCity(location)
-            mMap.clear()
-            mMap.addPin(location)
+            mapClickHandler(location)
         }
     }
 
     private fun getUserLocationWithPermission() {
-        when (PackageManager.PERMISSION_GRANTED) {
-            ContextCompat.checkSelfPermission(
+        if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION
-            ) -> {
-                viewModel.getUserLocation()
+            )
+        ) {
+            viewModel.getUserLocation()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+    }
+
+    private fun popUpWindowClickCallBack(): View.OnClickListener {
+        return View.OnClickListener {
+            popupWindow.dismiss()
+            mMap.clear()
+            parentFragmentManager.beginTransaction().replace(
+                R.id.fragment_container, ForecastFragment.newInstance(
+                    popupWindow.contentView.findViewById<TextView>(R.id.cityName).text.toString()
+                )
+            ).addToBackStack(null).commit()
+        }
+    }
+
+    private fun mapClickHandler(location: LatLng) {
+        if (popupWindow.isShowing) {
+            popupWindow.dismiss()
+        }
+        viewModel.getCurrentCity(location)
+        mMap.clear()
+        mMap.addPin(location)
+    }
+
+    private fun userLocationHandler(location: Location?) {
+        if (location != null) {
+            val coordinates = LatLng(location.latitude, location.longitude)
+            viewModel.getCurrentCity(coordinates)
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinates, 10f))
+            mMap.addPin(coordinates)
+        }
+    }
+
+    private fun currentCityHandler(address: Address?) {
+        if (!address?.locality.isNullOrEmpty()) {
+            popupWindow.contentView.findViewById<TextView>(R.id.cityName).text =
+                address?.locality
+            val lat =
+                address?.latitude?.let { Location.convert(it, Location.FORMAT_DEGREES) }
+            val lon = address?.longitude?.let {
+                Location.convert(
+                    it,
+                    Location.FORMAT_DEGREES
+                )
             }
-            else -> requestPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            popupWindow.contentView.findViewById<TextView>(R.id.location).text =
+                String.format(getString(R.string.lat_lng), lat, lon)
+            popupWindow.showAtLocation(view, Gravity.BOTTOM, 0, 24)
+        } else {
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.city_not_found),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }

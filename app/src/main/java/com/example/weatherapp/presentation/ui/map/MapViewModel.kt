@@ -6,32 +6,48 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.map.GetCityByCoordinatesUseCase
-import com.example.domain.map.GetUserLocationUseCase
+import com.example.domain.map.GetCityByCoordinates
+import com.example.domain.map.GetCityByCoordinatesImpl
+import com.example.domain.map.GetUserLocation
+import com.example.domain.map.GetUserLocationImpl
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.launch
 
 class MapViewModel(
-    private val getUserLocationUseCase: GetUserLocationUseCase,
-    private val getCityByCoordinatesUseCase: GetCityByCoordinatesUseCase
+    private val getUserLocation: GetUserLocation,
+    private val getCityByCoordinates: GetCityByCoordinates
 ) : ViewModel() {
 
-    private val _userLocation: MutableLiveData<Result<Location?>> = MutableLiveData()
-    val userLocation: LiveData<Result<Location?>> get() = _userLocation
+    private val _userLocation: MutableLiveData<Location?> = MutableLiveData()
+    val userLocation: LiveData<Location?> get() = _userLocation
 
-    private val _currentCity: MutableLiveData<Result<Address?>> = MutableLiveData()
-    val currentCity: LiveData<Result<Address?>> get() = _currentCity
+    private val _currentCity: MutableLiveData<Address?> = MutableLiveData()
+    val currentCity: LiveData<Address?> get() = _currentCity
 
     fun getUserLocation() {
         viewModelScope.launch {
-            _userLocation.value = getUserLocationUseCase.execute().single()
+            _userLocation.value = getUserLocation.execute().single().fold(
+                onSuccess = { location ->
+                    location
+                },
+                onFailure = { exception ->
+                    throw exception
+                }
+            )
         }
     }
 
     fun getCurrentCity(location: LatLng) {
         viewModelScope.launch {
-            _currentCity.value = getCityByCoordinatesUseCase.execute(location).single()
+            _currentCity.value = getCityByCoordinates.execute(location).single().fold(
+                onSuccess = { address ->
+                    address
+                },
+                onFailure = { exception ->
+                    throw exception
+                }
+            )
         }
     }
 }

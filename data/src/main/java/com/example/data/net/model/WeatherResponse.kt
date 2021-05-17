@@ -1,10 +1,11 @@
 package com.example.data.net.model
 
-import com.example.data.util.Constants.ICON_URL
-import com.example.data.util.Constants.ICON_URL_EXT
+import com.example.data.BuildConfig
 import com.example.domain.model.WeatherCondition
 import com.example.domain.model.Weather
 import com.google.gson.annotations.SerializedName
+
+private const val ICON_URL_EXT = "@2x.png"
 
 data class WeatherResponse(
     @SerializedName("coord")
@@ -91,7 +92,7 @@ fun WeatherResponse.asDomainModel(): Weather {
         temperature = main.temp,
         type = weather.first().main,
         description = weather.first().description,
-        icon = ICON_URL + weather.first().icon + ICON_URL_EXT,
+        icon = BuildConfig.ICON_URL + weather.first().icon + ICON_URL_EXT,
         humidity = main.humidity,
         windSpeed = wind.speed,
         windDeg = wind.deg,
